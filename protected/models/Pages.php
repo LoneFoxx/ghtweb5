@@ -36,7 +36,6 @@ class Pages extends ActiveRecord
 			array('page, title, seo_title, seo_description, seo_keywords', 'length', 'max' => 255),
 			array('page, title', 'length', 'min' => 4),
             array('text', 'length', 'min' => 15),
-            //array('page', 'checkPage'),
             array('page', 'unique', 'criteria' => array('condition' => 'lang = :lang', 'params' => array(
                 'lang' => $this->lang,
             )), 'message' => Yii::t('main', 'Страница уже существует.')),
@@ -76,25 +75,6 @@ class Pages extends ActiveRecord
 			'lang'              => Yii::t('main', 'Язык'),
 		);
 	}
-
-    public function checkPage($attr)
-    {
-        prt($this);die;
-
-        if(!$this->hasErrors() && $this->getScenario() == 'insert')
-        {
-            $res = db()->createCommand("SELECT COUNT(0) FROM {{pages}} WHERE page = :page AND lang = :lang")
-                ->queryScalar(array(
-                    'page' => $this->page,
-                    'lang' => $this->lang,
-                ));
-
-            if($res)
-            {
-                $this->addError($attr, Yii::t('main', 'Страница уже существует.'));
-            }
-        }
-    }
 
 	public function search()
 	{

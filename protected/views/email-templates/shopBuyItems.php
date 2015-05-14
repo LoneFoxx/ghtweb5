@@ -1,6 +1,6 @@
 <?php
 /**
- * @var ShopItems[] $items
+ * @var array $items
  */
 
 $totalSum = 0;
@@ -18,24 +18,22 @@ $totalSum = 0;
                 <th><?php echo Yii::t('main', 'Кол-во') ?></th>
                 <th><?php echo Yii::t('main', 'Заточка') ?></th>
                 <th><?php echo Yii::t('main', 'Скидка') ?></th>
-                <th><?php echo Yii::t('main', 'Цена') ?></th>
-                <th><?php echo Yii::t('main', 'Цена со скидкой') ?></th>
+                <th><?php echo Yii::t('main', 'Итоговая цена') ?></th>
             </tr>
         </thead>
-        <?php foreach($items as $i => $item) { ?>
-            <?php $totalSum += ShopItems::costAtDiscount($item->getCost(), $item->discount) ?>
+        <?php $i = 1; foreach($items as $item) { ?>
+            <?php $totalSum += $item['total_sum'] ?>
             <tr>
-                <td><?php echo ++$i ?></td>
-                <td><?php echo e($item->itemInfo->getFullName()) ?></td>
-                <td><?php echo $item->count ?></td>
-                <td><?php echo $item->enchant ?></td>
-                <td><?php echo $item->discount ?>%</td>
-                <td><?php echo formatCurrency($item->getCost(), FALSE) ?></td>
-                <td><?php echo formatCurrency(ShopItems::costAtDiscount($item->getCost(), $item->discount), FALSE) ?></td>
+                <td><?php echo $i++ ?></td>
+                <td><?php echo e($item['name']) ?></td>
+                <td><?php echo $item['count'] ?></td>
+                <td><?php echo $item['enchant'] ?></td>
+                <td><?php echo $item['discount'] ?>%</td>
+                <td><?php echo $item['cost_per_one_discount'] * $item['count'] ?></td>
             </tr>
         <?php } ?>
         <tfoot>
-            <td colspan="7"><?php echo Yii::t('main', 'Итого') ?>: <?php echo formatCurrency($totalSum) ?></td>
+            <td colspan="6"><?php echo Yii::t('main', 'Итого') ?>: <?php echo $totalSum ?></td>
         </tfoot>
     </table>
 <?php } ?>

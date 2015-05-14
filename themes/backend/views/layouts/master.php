@@ -26,7 +26,6 @@ js($assetsUrl . '/js/serializeForm.js', CClientScript::POS_END);
 js($assetsUrl . '/js/main.js', CClientScript::POS_END);
 
 Yii::import('application.modules.cabinet.models.Tickets');
-
 ?>
 
 <!doctype html>

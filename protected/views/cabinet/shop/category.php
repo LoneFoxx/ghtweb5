@@ -56,7 +56,7 @@ $this->breadcrumbs = array(
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <?php foreach($pack->items as $item) { ?>
+                                                <?php foreach($pack->items as $ii => $item) { ?>
                                                     <tr>
                                                         <td><?php echo $item->itemInfo->getIcon() ?></td>
                                                         <td>
@@ -66,7 +66,7 @@ $this->breadcrumbs = array(
                                                                 <span class="glyphicon glyphicon-question-sign" title="<?php echo e($item->description) ?>" rel="tooltip"></span>
                                                             <?php } ?>
                                                         </td>
-                                                        <td><?php echo number_format($item->count, 0, '', '.') ?></td>
+                                                        <td><input type="text" name="items[<?php echo $ii ?>][count]" value="<?php echo $item->count ?>" class="form-control"></td>
                                                         <td><?php echo $item->enchant ?></td>
                                                         <td>
                                                             <?php if($item->discount > 0) { ?>
@@ -86,7 +86,7 @@ $this->breadcrumbs = array(
                                                         <td>
                                                             <?php if($characters) { ?>
                                                                 <label for="<?php echo $item->id ?>" class="control">
-                                                                    <input id="<?php echo $item->id ?>" type="checkbox" name="items[]" value="<?php echo $item->id ?>">
+                                                                    <input id="<?php echo $item->id ?>" type="checkbox" name="items[<?php echo $ii ?>][id]" value="<?php echo $item->id ?>">
                                                                     <span class="switch"></span>
                                                                 </label>
                                                             <?php } ?>

@@ -194,6 +194,7 @@ label.control
 		position: relative;
 	}
 
+		input,
 		.form-group .field input,
 		.form-group .field textarea
 		{

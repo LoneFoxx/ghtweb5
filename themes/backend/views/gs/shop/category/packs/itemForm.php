@@ -65,7 +65,7 @@ $this->breadcrumbs = array(
                 <?php } ?>
             </div>
             <?php echo $form->textField($model, 'item_name', array('placeholder' => $model->getAttributeLabel('item_name'), 'class' => 'form-control js-item-name')) ?>
-            <p class="help-block"><?php echo Yii::t('backend', 'Название пишется по Русски (База синхронизирована с РУ офом)') ?></p>
+            <p class="help-block"><?php echo Yii::t('backend', 'Название пишется по английски (База синхронизирована с Euro клиентом)') ?></p>
         </div>
     </div>
     <div class="form-group">
@@ -85,7 +85,7 @@ $this->breadcrumbs = array(
         <?php echo $form->labelEx($model, 'cost', array('class' => 'col-lg-3 control-label')) ?>
         <div class="col-lg-9">
             <?php echo $form->textField($model, 'cost', array('placeholder' => $model->getAttributeLabel('cost'), 'class' => 'form-control')) ?>
-            <p class="help-block"><?php echo Yii::t('backend', 'Сколько <b>:name</b> отдадут за предмет.', array(':name' => $gs->getCurrencyName())) ?></p>
+            <p class="help-block"><?php echo Yii::t('backend', 'Сколько <b>:name</b> отдадут за кол-во предметов (кол-во указывается ниже).', array(':name' => $gs->getCurrencyName())) ?></p>
         </div>
     </div>
     <div class="form-group">

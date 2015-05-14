@@ -91,33 +91,47 @@ class ShopController extends CabinetBaseController
      */
     public function actionBuy($category_link)
     {
-        if(!request()->getIsPostRequest() || !isset($_POST['pack_id']) || !is_numeric($_POST['pack_id']))
+        if(!request()->getIsPostRequest() || (!isset($_POST['pack_id']) || !filter_var($_POST['pack_id'], FILTER_VALIDATE_INT)) && $_POST['char_id'] > 0)
         {
             $this->redirect(array('index'));
         }
 
         // Предметы не выбраны
-        if(!isset($_POST['items']) || !is_array($_POST['items']))
+        if(!isset($_POST['items']) || !is_array($_POST['items']) || count($_POST['items']) < 1)
         {
             user()->setFlash(FlashConst::MESSAGE_ERROR, Yii::t('main', 'Выберите предметы.'));
             $this->redirectBack();
         }
 
         // Не выбран персонаж
-        if(!isset($_POST['char_id']) || !is_numeric($_POST['char_id']))
+        if(!isset($_POST['char_id']) || !filter_var($_POST['char_id'], FILTER_VALIDATE_INT) && $_POST['char_id'] > 0)
         {
             user()->setFlash(FlashConst::MESSAGE_ERROR, Yii::t('main', 'Выберите персонажа.'));
             $this->redirectBack();
         }
 
-        $_POST['items'] = array_map('intval', $_POST['items']);
+        $char_id  = (int) $_POST['char_id'];
+        $packId   = (int) $_POST['pack_id'];
+        $items    = array();
 
-        $char_id = (int) $_POST['char_id'];
-        $packId  = (int) $_POST['pack_id'];
-        $items   = $_POST['items'];
+        foreach($_POST['items'] as $item)
+        {
+            if(!isset($item['id']) || !isset($item['count']))
+            {
+                continue;
+            }
+
+            $items[(int) $item['id']] = (int) $item['count'];
+        }
+
+        if(!$items)
+        {
+            user()->setFlash(FlashConst::MESSAGE_ERROR, Yii::t('main', 'Выберите предметы.'));
+            $this->redirectBack();
+        }
 
         // Проверяю есть ли такой раздел
-        $category = array();
+        $category = NULL;
 
         foreach($this->getCategories() as $row)
         {
@@ -136,16 +150,8 @@ class ShopController extends CabinetBaseController
         }
 
         // Проверяю есть ли такой набор
-        $criteria = new CDbCriteria(array(
-            'condition' => 'id = :id AND category_id = :category_id',
-            'params'    => array(
-                'id'          => $packId,
-                'category_id' => $category->getPrimaryKey(),
-            ),
-            'scopes' => array('opened'),
-        ));
-
-        $pack = ShopItemsPacks::model()->find($criteria);
+        $pack = db()->createCommand("SELECT id FROM {{shop_items_packs}} WHERE id = ? AND category_id = ? AND status = ?")
+            ->queryRow(TRUE, array($packId, $category->getPrimaryKey(), ActiveRecord::STATUS_ON));
 
         // Набор не найден
         if(!$pack)
@@ -158,57 +164,80 @@ class ShopController extends CabinetBaseController
         $criteria = new CDbCriteria(array(
             'condition' => 'pack_id = :pack_id',
             'params'    => array(
-                'pack_id' => $pack->getPrimaryKey(),
+                'pack_id' => $pack['id'],
             ),
             'scopes' => array('opened'),
             'with'   => array('itemInfo')
         ));
 
-        $criteria->addInCondition('id', $items);
+        $criteria->addInCondition('id', array_keys($items));
 
-        $items = ShopItems::model()->findAll($criteria);
+        $itemsDb = ShopItems::model()->findAll($criteria);
 
         // Если предметы не найдены
-        if(!$items)
+        if(!$itemsDb)
         {
             user()->setFlash(FlashConst::MESSAGE_ERROR, Yii::t('main', 'Покупка невозможна.'));
             $this->redirectBack();
         }
 
 
-        // Сумма за донат
-        $totalSumDonat = 0;
-
-        // Сумма за голосования
-        $totalSumVote  = 0;
+        // Общая сумма
+        $totalSum  = 0;
+        $itemsInfo = array();
 
         // Подсчитываю что почём
-        foreach($items as $item)
+        foreach($itemsDb as $item)
         {
-            if($item->currency_type == 'donat')
+            $id                 = (int) $item->getPrimaryKey();
+            $discount           = (float) $item->discount;
+            $cost               = (float) $item->cost;
+            $costDiscount       = ShopItems::costAtDiscount($cost, $discount);
+            $count              = (int) $item->count;
+            $sum                = 0;
+            $costPerOne         = (float) $cost / $count;
+            $costPerOneDiscount = ShopItems::costAtDiscount($costPerOne, $discount);
+
+            $itemsInfo[$id] = array(
+                'id'                    => $id,
+                'item_id'               => (int) $item->item_id,
+                'cost'                  => $cost,
+                'cost_per_one'          => $cost / $count,
+                'cost_per_one_discount' => $costPerOneDiscount,
+                'discount'              => $discount,
+                'name'                  => $item->itemInfo->getFullName(),
+                'desc'                  => $item->itemInfo->description,
+                'enchant'               => (int) $item->enchant,
+            );
+
+            if(($count = $items[$id]) > 0)
             {
-                $totalSumDonat += ShopItems::costAtDiscount($item->cost, $item->discount);
+                $sum += $count * $costPerOneDiscount;
             }
-            elseif($item->currency_type == 'vote')
+
+            $itemsInfo[$id]['total_sum_o'] = $sum;
+
+            if($sum > 1)
             {
-                $totalSumVote += ShopItems::costAtDiscount($item->cost, $item->discount);
+                $sum = round($sum, 2);
             }
+            else
+            {
+                $sum = ceil($sum);
+            }
+
+            $itemsInfo[$id]['total_sum'] = $sum;
+            $itemsInfo[$id]['count'] = $count;
+
+            $totalSum += $sum;
         }
 
         // Проверка баланса
-        if($totalSumDonat > 0 && user()->get('balance') < $totalSumDonat)
+        if($totalSum > 0 && user()->get('balance') < $totalSum)
         {
             user()->setFlash(FlashConst::MESSAGE_ERROR, Yii::t('main', 'У Вас недостаточно средств на балансе для совершения сделки.'));
             $this->redirectBack();
         }
-
-        // Проверка баланса
-        if($totalSumVote > 0 && user()->vote_balance < $totalSumVote)
-        {
-            user()->setFlash(FlashConst::MESSAGE_ERROR, Yii::t('main', 'У Вас недостаточно Голосов для совершения сделки.'));
-            $this->redirectBack();
-        }
-
 
         // Смотрю персонажа на сервере
         try
@@ -216,7 +245,7 @@ class ShopController extends CabinetBaseController
             $l2 = l2('gs', user()->getGsId())->connect();
 
             $charIdFieldName = $l2->getField('characters.char_id');
-            $login           = user()->getLogin();
+            $login           = user()->get('login');
 
             $character = $l2->getDb()->createCommand("SELECT online FROM {{characters}} WHERE account_name = :account_name AND " . $charIdFieldName . " = :char_id LIMIT 1")
                 ->bindParam('account_name', $login, PDO::PARAM_STR)
@@ -238,16 +267,15 @@ class ShopController extends CabinetBaseController
             // Подготавливаю предметы для БД
             $itemsToDb = array();
 
-            foreach($items as $item)
+            foreach($itemsInfo as $item)
             {
                 $itemsToDb[] = array(
                     'owner_id' => $char_id,
-                    'item_id'  => $item->item_id,
-                    'count'    => $item->count,
-                    'enchant'  => $item->enchant,
+                    'item_id'  => $item['item_id'],
+                    'count'    => $item['count'],
+                    'enchant'  => $item['enchant'],
                 );
             }
-
 
             // Накидываю предмет(ы) в игру
             $res = $l2->multiInsertItem($itemsToDb);
@@ -256,29 +284,23 @@ class ShopController extends CabinetBaseController
             {
                 $userId = user()->getId();
 
-                if($totalSumDonat > 0)
+                if($totalSum > 0)
                 {
                     db()->createCommand("UPDATE {{user_profiles}} SET balance = balance - :total_sum WHERE user_id = :user_id LIMIT 1")
-                        ->bindParam('total_sum', $totalSumDonat)
-                        ->bindParam('user_id', $userId, PDO::PARAM_INT)
-                        ->execute();
-                }
-
-                if($totalSumVote)
-                {
-                    db()->createCommand("UPDATE {{user_profiles}} SET vote_balance = vote_balance - :total_sum WHERE user_id = :user_id LIMIT 1")
-                        ->bindParam('total_sum', $totalSumVote)
-                        ->bindParam('user_id', $userId, PDO::PARAM_INT)
-                        ->execute();
+                        ->execute(array(
+                            'total_sum' => $totalSum,
+                            'user_id' => $userId,
+                        ));
                 }
 
                 // Записываю лог о сделке
                 $itemsLog = array();
                 $itemList = '';
 
-                foreach($items as $i => $item)
+                foreach($itemsDb as $i => $item)
                 {
-                    $itemList .= ++$i . ') ' . $item->itemInfo->getFullName() . ' x' . $item->count . '<br>';
+                    $itemId   = $item->getPrimaryKey();
+                    $itemList .= ++$i . ') ' . $item->itemInfo->getFullName() . ' x' . $itemsInfo[$itemId]['count'] . ' (' . $itemsInfo[$itemId]['total_sum'] . ' ' . $this->gs->currency_name . ')<br>';
 
                     $itemsLog[] = array(
                         'pack_id'       => $item->pack_id,
@@ -287,7 +309,7 @@ class ShopController extends CabinetBaseController
                         'cost'          => $item->cost,
                         'discount'      => $item->discount,
                         'currency_type' => $item->currency_type,
-                        'count'         => $item->count,
+                        'count'         => $itemsInfo[$itemId]['count'],
                         'enchant'       => $item->enchant,
                         'user_id'       => user()->getId(),
                         'char_id'       => $char_id,
@@ -318,7 +340,7 @@ class ShopController extends CabinetBaseController
                     array(':item_list' => $itemList)));
 
                 notify()->shopBuyItems(user()->get('email'), array(
-                    'items' => $items,
+                    'items' => $itemsInfo,
                 ));
 
                 $this->redirectBack();

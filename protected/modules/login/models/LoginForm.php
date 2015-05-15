@@ -52,6 +52,7 @@ class LoginForm extends CFormModel
             array('gs_id,login,password', 'required'),
             array('login', 'length', 'min' => Users::LOGIN_MIN_LENGTH, 'max' => Users::LOGIN_MAX_LENGTH),
             array('password', 'length', 'min' => Users::PASSWORD_MIN_LENGTH, 'max' => Users::PASSWORD_MAX_LENGTH),
+            array('login', 'loginExists'),
             array('gs_id', 'gsIsExists'),
         );
 
@@ -88,12 +89,115 @@ class LoginForm extends CFormModel
     }
 
     /**
+     * Проверка логина на сервере
+     *
+     * @param $attr
+     */
+    public function loginExists($attr)
+    {
+        if(!$this->hasErrors($attr))
+        {
+            $siteAccountUserId = NULL;
+
+            try
+            {
+                $found = FALSE;
+                $login = $this->getLogin();
+                $lsId  = $this->getLsId();
+
+                $l2 = l2('ls', $lsId)->connect();
+
+                $command = $l2->getDb()->createCommand();
+
+                $command->where('login = :login', array(
+                    'login' => $login,
+                ));
+
+                $command->from('accounts');
+
+                $account = $command->queryRow();
+
+                // Ищю аккаунт на сайте
+                $siteAccount = db()->createCommand("SELECT user_id FROM {{users}} WHERE login = :login LIMIT 1")
+                    ->queryRow(TRUE, array(
+                        'login' => $login,
+                    ));
+
+                if(isset($siteAccount['user_id']))
+                {
+                    $siteAccountUserId = $siteAccount['user_id'];
+                }
+
+                // Аккаунт на сервере найден
+                if($account)
+                {
+                    if($account['password'] == $l2->passwordEncrypt($this->getPassword()))
+                    {
+                        // Аккаунта на сайте нет, создаю его так как на сервере он уже есть
+                        if(!$siteAccount)
+                        {
+                            $email = NULL;
+
+                            $columnNames = $l2->getDb()
+                                ->getSchema()
+                                ->getTable('accounts')
+                                ->getColumnNames();
+
+                            if(is_array($columnNames))
+                            {
+                                foreach($columnNames as $column)
+                                {
+                                    if(strpos($column, 'mail') !== FALSE && isset($account[$column]))
+                                    {
+                                        $email = $account[$column];
+                                    }
+                                }
+                            }
+
+                            // Создаю аккаунт на сайте
+                            $userModel = new Users();
+
+                            $userModel->password  = NULL;
+                            $userModel->login     = $login;
+                            $userModel->email     = $email;
+                            $userModel->activated = Users::STATUS_ACTIVATED;
+                            $userModel->role      = Users::ROLE_DEFAULT;
+                            $userModel->ls_id     = $lsId;
+
+                            $userModel->save(FALSE);
+
+                            $siteAccountUserId = $userModel->getPrimaryKey();
+                        }
+
+                        $found = TRUE;
+                    }
+                }
+
+                // Аккаунт не найден
+                if(!$found)
+                {
+                    if($siteAccountUserId)
+                    {
+                        UsersAuthLogs::model()->addErrorAuth($siteAccountUserId);
+                    }
+
+                    $this->incrementBadAttempt();
+                    $this->addError($attr, Yii::t('main', 'Неправильный Логин или Пароль.'));
+                }
+            }
+            catch(Exception $e)
+            {
+                $this->addError($attr, Yii::t('main', 'Произошла ошибка! Поробуйте повторить позже.'));
+            }
+        }
+    }
+
+    /**
      * Проверка сервера
      *
      * @param string $attribute
-     * @param array $params
      */
-    public function gsIsExists($attribute, array $params)
+    public function gsIsExists($attribute)
     {
         if(!isset($this->gs_list[$this->gs_id]))
         {
@@ -113,13 +217,12 @@ class LoginForm extends CFormModel
 
     public function login()
     {
-        $identity = new UserIdentity($this->login, $this->password, $this->ls_id, $this->gs_id);
+        $identity = new UserIdentity($this->login, $this->ls_id, $this->gs_id);
         $identity->authenticate();
 
         switch($identity->errorCode)
         {
             case UserIdentity::ERROR_USERNAME_INVALID:
-            case UserIdentity::ERROR_PASSWORD_INVALID:
             {
                 $this->addError('status', Yii::t('main', 'Неправильный Логин или Пароль.'));
                 break;
@@ -143,8 +246,11 @@ class LoginForm extends CFormModel
             {
                 $identity->setState('gs_id', $this->gs_id);
 
+                $this->clearBadAttempt();
+
                 $duration = 3600 * 24 * 7; // 7 days
                 user()->login($identity, $duration);
+
                 return TRUE;
             }
         }
@@ -194,5 +300,77 @@ class LoginForm extends CFormModel
     public function getGsId()
     {
         return $this->gs_id;
+    }
+
+    /**
+     * @return CFileCache
+     */
+    private function getCache()
+    {
+        static $cache;
+
+        if(!$cache)
+        {
+            $cache = new CFileCache();
+            $cache->init();
+        }
+
+        return $cache;
+    }
+
+    /**
+     * @return string
+     */
+    private function getCacheName()
+    {
+        return 'count.failed.attempts' . userIp();
+    }
+
+    /**
+     * Добавление неудачной попытки входа
+     *
+     * @return void
+     */
+    public function incrementBadAttempt()
+    {
+        $cacheName = $this->getCacheName();
+        $cache     = $this->getCache();
+        $count     = $this->getCountBadAttempt();
+
+        $cache->set($cacheName, ++$count, (int) config('login.failed_attempts_blocked_time') * 60);
+    }
+
+    /**
+     * @return void
+     */
+    public function clearBadAttempt()
+    {
+        $cacheName = $this->getCacheName();
+        $cache     = $this->getCache();
+
+        $cache->delete($cacheName);
+    }
+
+    /**
+     * @return int
+     */
+    public function getCountBadAttempt()
+    {
+        $cacheName = $this->getCacheName();
+        $cache     = $this->getCache();
+
+        $count = $cache->get($cacheName);
+
+        return $count === FALSE
+            ? 0
+            : $count;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isBlockedForm()
+    {
+        return (int) config('login.failed_attempts_blocked_time') > 0 && $this->getCountBadAttempt() >= (int) config('login.count_failed_attempts_for_blocked');
     }
 }

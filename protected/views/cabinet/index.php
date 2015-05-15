@@ -6,7 +6,7 @@
 $this->pageTitle = Yii::t('main', 'Личный кабинет');
 ?>
 
-<h2 class="title user"><?php echo Yii::t('main', 'Здравствуй, :user_name', array(':user_name' => user()->getLogin())) ?>!</h2>
+<h2 class="title user"><?php echo Yii::t('main', 'Здравствуй, :user_name', array(':user_name' => user()->get('login'))) ?>!</h2>
 
 <div class="user-info">
 	<p class="gold"><?php echo Yii::t('main', '<span>Ваш баланс —</span> :balance', array(':balance' => '<b>' . formatCurrency(user()->get('balance')) . '</b>')) ?></p>

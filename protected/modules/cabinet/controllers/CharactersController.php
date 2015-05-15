@@ -50,7 +50,7 @@ class CharactersController extends CabinetBaseController
                 $charIdFieldName = $l2->getField('characters.char_id');
 
                 $command = $l2->getDb()->createCommand();
-                $command->where('account_name = :account_name AND ' . $charIdFieldName . ' = :char_id', array(':account_name' => user()->getLogin(), ':char_id' => $char_id));
+                $command->where('account_name = :account_name AND ' . $charIdFieldName . ' = :char_id', array(':account_name' => user()->get('login'), ':char_id' => $char_id));
 
                 $data['character'] = $l2->characters($command)->queryRow();
 
@@ -163,7 +163,7 @@ class CharactersController extends CabinetBaseController
 
             $command = $l2->getDb()->createCommand();
 
-            $command->where($charIdFieldName . ' = :char_id AND account_name = :account_name', array(':char_id' => $char_id, ':account_name' => user()->getLogin()));
+            $command->where($charIdFieldName . ' = :char_id AND account_name = :account_name', array(':char_id' => $char_id, ':account_name' => user()->get('login')));
 
             $character = $l2->characters($command)->queryRow();
 
@@ -181,7 +181,7 @@ class CharactersController extends CabinetBaseController
             }
 
             $city       = Lineage::getRandomCity();
-            $userName   = user()->getLogin();
+            $userName   = user()->get('login');
             $x          = $city['coordinates'][0]['x'];
             $y          = $city['coordinates'][0]['y'];
             $z          = $city['coordinates'][0]['z'];

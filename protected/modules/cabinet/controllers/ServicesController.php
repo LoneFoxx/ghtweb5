@@ -35,7 +35,7 @@ class ServicesController extends CabinetBaseController
                     $l2 = l2('gs', $gs_id)->connect();
                 }
 
-                $login = user()->getLogin();
+                $login = user()->get('login');
 
                 $data['premium'] = $l2->getPremiumInfo($login);
 
@@ -133,11 +133,11 @@ class ServicesController extends CabinetBaseController
         {
             try
             {
-                $gs = Gs::model()->opened()->findByPk(user()->gs_id);
+                $gs = Gs::model()->opened()->findByPk(user()->getGsId());
 
                 $l2 = l2('ls', $gs->login_id)->connect();
 
-                $res = $l2->removeHWID(user()->getLogin());
+                $res = $l2->removeHWID(user()->get('login'));
 
                 if($res > 0)
                 {

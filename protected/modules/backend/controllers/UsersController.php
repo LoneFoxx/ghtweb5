@@ -48,8 +48,6 @@ class UsersController extends BackendBaseController
 
     public function actionAuthHistory($user_id)
     {
-        Yii::import('application.modules.cabinet.models.UsersAuthLogs');
-
         $model = new UsersAuthLogs('search');
         $model->unsetAttributes();
 

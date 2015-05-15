@@ -1,7 +1,5 @@
 <?php
 
-Yii::import('application.modules.cabinet.models.UsersAuthLogs');
-
 class AdminIdentity extends CUserIdentity
 {
     private $_id;
@@ -37,13 +35,7 @@ class AdminIdentity extends CUserIdentity
             $this->errorCode = self::ERROR_PASSWORD_INVALID;
 
             // Сохраняю неудачную попытку входа
-            db()->createCommand()->insert('{{users_auth_logs}}', array(
-                'user_id'    => $this->_user->getPrimaryKey(),
-                'ip'         => $userIp,
-                'user_agent' => request()->getUserAgent(),
-                'status'     => UsersAuthLogs::STATUS_AUTH_DENIED,
-                'created_at' => date('Y-m-d H:i:s'),
-            ));
+            UsersAuthLogs::model()->addErrorAuth($this->_user->getPrimaryKey());
         }
         elseif($this->_user->activated == Users::STATUS_INACTIVATED)
         {
@@ -68,13 +60,7 @@ class AdminIdentity extends CUserIdentity
             $this->_user->save(FALSE, array('auth_hash', 'updated_at'));
 
             // Запись в лог
-            db()->createCommand()->insert('{{users_auth_logs}}', array(
-                'user_id'    => $this->_user->getPrimaryKey(),
-                'ip'         => $userIp,
-                'user_agent' => request()->getUserAgent(),
-                'status'     => UsersAuthLogs::STATUS_AUTH_SUCCESS,
-                'created_at' => date('Y-m-d H:i:s'),
-            ));
+            UsersAuthLogs::model()->addSuccessAuth($this->_user->getPrimaryKey());
 
             $this->errorCode = self::ERROR_NONE;
         }

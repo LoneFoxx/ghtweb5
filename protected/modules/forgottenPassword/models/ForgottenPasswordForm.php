@@ -117,7 +117,7 @@ class ForgottenPasswordForm extends CFormModel
 
             if($user === NULL)
             {
-                $this->addError(__FUNCTION__, Yii::t('main', 'Аккаунт не найден'));
+                $this->addError(__FUNCTION__, Yii::t('main', 'Аккаунт не найден.'));
             }
             elseif($user->isBanned())
             {
@@ -140,7 +140,7 @@ class ForgottenPasswordForm extends CFormModel
 
                     if(!$res)
                     {
-                        $this->addError(__FUNCTION__, Yii::t('main', 'Аккаунт не найден'));
+                        $this->addError(__FUNCTION__, Yii::t('main', 'Аккаунт не найден.'));
                     }
                 }
                 catch(Exception $e)

@@ -108,9 +108,8 @@ class Users extends ActiveRecord
     {
         if($this->isNewRecord)
         {
-            $this->password         = self::hashPassword($this->password);
-            $this->referer          = self::generateRefererCode();
-            $this->registration_ip  = userIp();
+            $this->referer         = self::generateRefererCode();
+            $this->registration_ip = userIp();
         }
 
         return parent::beforeSave();

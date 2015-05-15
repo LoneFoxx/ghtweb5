@@ -4,12 +4,12 @@
  * This is the model class for table "{{config}}".
  *
  * The followings are the available columns in table '{{config}}':
- * @property string $id
- * @property string $param
- * @property string $value
- * @property string $default
- * @property string $label
- * @property string $type
+ * @property string      $id
+ * @property string      $param
+ * @property string      $value
+ * @property string      $default
+ * @property string      $label
+ * @property string      $type
  *
  * The followings are the available model relations:
  * @property ConfigGroup $group
@@ -34,7 +34,7 @@ class Config extends ActiveRecord
             array('param, type', 'length', 'max' => 128),
             array('label', 'length', 'max' => 255),
 
-            array('id, param, value, default, label, type', 'safe', 'on'=>'search'),
+            array('id, param, value, default, label, type', 'safe', 'on' => 'search'),
         );
     }
 
@@ -43,9 +43,7 @@ class Config extends ActiveRecord
      */
     public function relations()
     {
-        return array(
-            'group' => array(self::BELONGS_TO, 'ConfigGroup', 'id'),
-        );
+        return array('group' => array(self::BELONGS_TO, 'ConfigGroup', 'id'));
     }
 
     /**
@@ -54,28 +52,28 @@ class Config extends ActiveRecord
     public function attributeLabels()
     {
         return array(
-            'id'        => 'ID',
-            'param'     => 'Param',
-            'value'     => 'Value',
-            'default'   => 'Default',
-            'label'     => 'Label',
-            'type'      => 'Type',
+            'id'      => 'ID',
+            'param'   => 'Param',
+            'value'   => 'Value',
+            'default' => 'Default',
+            'label'   => 'Label',
+            'type'    => 'Type',
         );
     }
 
     public function search()
     {
-        $criteria=new CDbCriteria;
+        $criteria = new CDbCriteria;
 
-        $criteria->compare('id',$this->id,true);
-        $criteria->compare('param',$this->param,true);
-        $criteria->compare('value',$this->value,true);
-        $criteria->compare('default',$this->default,true);
-        $criteria->compare('label',$this->label,true);
-        $criteria->compare('type',$this->type,true);
+        $criteria->compare('id', $this->id, TRUE);
+        $criteria->compare('param', $this->param, TRUE);
+        $criteria->compare('value', $this->value, TRUE);
+        $criteria->compare('default', $this->default, TRUE);
+        $criteria->compare('label', $this->label, TRUE);
+        $criteria->compare('type', $this->type, TRUE);
 
         return new CActiveDataProvider($this, array(
-            'criteria'=>$criteria,
+            'criteria' => $criteria,
         ));
     }
 
@@ -141,7 +139,7 @@ class Config extends ActiveRecord
      */
     public function getPages()
     {
-        return HTML::listData(Pages::model()->findAll(), 'page', 'title');
+        return HTML::listData(Pages::model()->not_deleted()->findAll(), 'page', 'title');
     }
 
     /**
@@ -167,6 +165,7 @@ class Config extends ActiveRecord
     public function getForumTypes()
     {
         $types = app()->params['forum_types'];
+
         return array_combine($types, $types);
     }
 

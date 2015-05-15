@@ -1,7 +1,5 @@
 <?php
 
-Yii::import('application.modules.cabinet.models.UsersAuthLogs');
-
 class UserIdentity extends CUserIdentity
 {
     private $_id;
@@ -19,10 +17,9 @@ class UserIdentity extends CUserIdentity
     private $_gs_id;
 
 
-    public function __construct($username, $password, $ls_id, $gs_id)
+    public function __construct($username, $ls_id, $gs_id)
     {
         $this->username = $username;
-        $this->password = $password;
         $this->_ls_id   = $ls_id;
         $this->_gs_id   = $gs_id;
     }
@@ -31,26 +28,13 @@ class UserIdentity extends CUserIdentity
 	{
         $userIp      = userIp();
         $this->_user = Users::model()->with('profile')->find('login = :login AND ls_id = :ls_id', array(
-            ':login' => $this->username,
+            'login' => $this->username,
             'ls_id'  => $this->_ls_id,
         ));
 
         if($this->_user === NULL)
         {
             $this->errorCode = self::ERROR_USERNAME_INVALID;
-        }
-        elseif(Users::validatePassword($this->password, $this->_user->password) === FALSE)
-        {
-            $this->errorCode = self::ERROR_PASSWORD_INVALID;
-
-            // Сохраняю неудачную попытку входа
-            db()->createCommand()->insert('{{users_auth_logs}}', array(
-                'user_id'    => $this->_user->getPrimaryKey(),
-                'ip'         => $userIp,
-                'user_agent' => request()->getUserAgent(),
-                'status'     => UsersAuthLogs::STATUS_AUTH_DENIED,
-                'created_at' => date('Y-m-d H:i:s'),
-            ));
         }
         elseif(!$this->_user->isActivated())
         {
@@ -74,16 +58,9 @@ class UserIdentity extends CUserIdentity
             $this->setState('gs_id', $this->_gs_id);
             $this->setState('ls_id', $this->_user->getLsId());
 
-            $this->_user->save(FALSE, array('auth_hash', 'updated_at'));
+            UsersAuthLogs::model()->addSuccessAuth($this->_id);
 
-            // Запись в лог
-            db()->createCommand()->insert('{{users_auth_logs}}', array(
-                'user_id'    => $this->_user->getPrimaryKey(),
-                'ip'         => $userIp,
-                'user_agent' => request()->getUserAgent(),
-                'status'     => UsersAuthLogs::STATUS_AUTH_SUCCESS,
-                'created_at' => date('Y-m-d H:i:s'),
-            ));
+            $this->_user->save(FALSE, array('auth_hash', 'updated_at'));
 
             $this->errorCode = self::ERROR_NONE;
         }

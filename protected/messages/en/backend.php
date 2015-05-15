@@ -270,11 +270,9 @@ return array(
     'Чтобы добавить предмет достаточно начать набирать его название или ввести его ID' => 'To add the object just start typing the name or enter its ID',
     'Юзер' => 'The user',
     'Юзер не найден.' => 'The user could not be found.',
-    'Юзеры' => 'Action Users',
+    'Юзеры' => 'Users',
     'аккаунты' => 'Accounts',
     'вкл' => 'On',
     'выкл' => 'Off',
     'назад' => 'Back',
-
-
 );

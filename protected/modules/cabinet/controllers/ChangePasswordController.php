@@ -8,7 +8,7 @@ class ChangePasswordController extends CabinetBaseController
 
         if(isset($_POST['ChangePasswordForm']))
         {
-            $model->attributes = $_POST['ChangePasswordForm'];
+            $model->setAttributes($_POST['ChangePasswordForm']);
 
             if($model->validate())
             {

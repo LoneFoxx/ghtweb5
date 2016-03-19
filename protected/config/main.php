@@ -375,6 +375,7 @@ return array(
         // Версии серверов
         'server_versions' => array(
             'Lucera2'       => 'Lucera 2', // http://lucera2.ru
+            'Lucera3_it'    => 'Lucera 3', // http://lucera2.ru
             'Emurt_hf'      => 'emurt HF', // http://emurt.ru/index.php
             'OpenTeam_hf'   => 'OpenTeam HF',
             'L2_dev_hf'     => 'L2 DeV HF', // http://dev.lineage-2.me/

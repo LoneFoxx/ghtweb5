@@ -159,11 +159,11 @@ LEFT JOIN character_subclasses ON character_subclasses.char_obj_id = characters.
 
         /*
 SELECT
-items.owner_id, items.item_id, items.amount, items.enchant, items.location
+items.owner_id, items.item_type AS item_id, items.amount AS count, items.enchant AS enchant_level, items.location
 FROM items
         */
         return $command
-			->select(array('items.owner_id', 'items.item_type AS item_id', 'items.amount', 'items.enchant', 'items.location'))
+			->select(array('items.owner_id', 'items.item_type AS item_id', 'items.amount AS count', 'items.enchant AS enchant_level', 'items.location'))
 			->from('items');
     }
 
